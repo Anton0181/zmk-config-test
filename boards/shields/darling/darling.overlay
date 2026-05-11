@@ -10,7 +10,55 @@
     chosen {
         zmk,physical-layout = &default_layout;
     };
+    {
+    /* --------------------------------------------------------------
+       Мультиплексор 74HC4051 (8‑канальный)
+       -------------------------------------------------------------- */
+    mux0: mux0 {
+        compatible = "zmk,mux-74hc4051";
+        /* Выбор канала S0‑S2 */
+        s0-gpios = <&pro_micro 3 GPIO_ACTIVE_HIGH>;   /* P0.03 */
+        s1-gpios = <&pro_micro 4 GPIO_ACTIVE_HIGH>;   /* P0.04 */
+        s2-gpios = <&pro_micro 5 GPIO_ACTIVE_HIGH>;   /* P0.05 */
+        /* Enable (активно низким) – если не используете, оставьте disconnected */
+        enable-gpios = <&pro_micro 6 GPIO_ACTIVE_LOW>; /* P0.06 */
+        /* Выход мультиплексора подключён к ADC каналу AIN0 (P0.02) */
+        adc-channel = <0>;   /* Zephyr ADC channel index */
+        status = "okay";
+    };
 
+    /* --------------------------------------------------------------
+       TMR‑датчики (по одному на каждый канал мультиплексора)
+       -------------------------------------------------------------- */
+    tmr_sensor_0: tmr_sensor_0 {
+        compatible = "he,kscan-multiplexer";
+        /* Какой вход мультиплексора обслуживает данный датчик */
+        mux-channel = <0>;   /* 0‑7 для 74HC4051 */
+        /* Порог срабатывания (в единицах ADC, 0‑4095 для 12‑бит) */
+        actuate-pt = <2048>; /* пример: середина диапазона */
+        /* При необходимости можно задать возврат (release) и гистерезис */
+        release-pt = <1800>;
+        hysteresys = <100>;
+        status = "okay";
+    };
+
+    tmr_sensor_1: tmr_sensor_1 {
+        compatible = "he,kscan-multiplexer";
+        mux-channel = <1>;
+        actuate-pt = <2048>;
+        release-pt = <1800>;
+        hysteresys = <100>;
+        status = "okay";
+    };
+    /* …добавьте остальные датчики до нужного числа… */
+
+    /* Объединяем все датчики в один список, который будет опрашиваться */
+    tmr_sensors: tmr_sensors {
+        compatible = "zmk,ensor-mux-list";
+        sensors = <&tmr_sensor_0 &tmr_sensor_1 /* … &tmr_sensor_N */>;
+        status = "okay";
+    };
+};
     kscan: kscan {
         // If the hardware does not use a switch matrix, change this to the
         // appropriate driver and update the properties below to match.
